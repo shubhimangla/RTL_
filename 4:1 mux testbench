@@ -1,0 +1,39 @@
+// Testbench 4:1 mux
+module tbmux4_1;
+  reg [3:0] tb_i0;
+  reg [3:0] tb_i1;
+  reg [3:0] tb_i2;
+  reg [3:0] tb_i3;
+  reg [1:0] tb_sel;
+  wire [3:0] tb_y;
+  
+  mux4_1 uut(
+    .i0(tb_i0),
+    .i1(tb_i1),
+    .i2( tb_i2),
+    .i3(tb_i3),
+    .sel(tb_sel),
+    .y(tb_y)
+  );
+  
+initial
+  begin
+    tb_i0=4'b0000; tb_i1= 4'b0000; tb_i2=4'b0000; tb_i3=4'b0000; tb_sel=2'b00;
+    $display("Time | sel | i0 | i1 | i2 | i3 | y");
+    $monitor("%g |%b| %b| %b | %b |%b | %b ", $time, tb_sel, tb_i0, tb_i1,tb_i2,tb_i3, tb_y);
+
+  #10 tb_sel=2'b00 ; tb_i0=4'b0000 ; tb_i1=4'b0001; tb_i2=4'b0010; tb_i3=4'b0111;
+    
+    #10 tb_sel=2'b01; 
+    
+    #10 tb_sel=2'b10; 
+    
+    #10 tb_sel=2'b11;
+    
+    #10$finish;
+    
+  end
+endmodule
+  
+  
+    
