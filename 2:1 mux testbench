@@ -1,0 +1,27 @@
+// Testbench for 2:1 mux
+module tb_mux;
+  reg [2:0] tb_i0;
+  reg [2:0] tb_i1;
+  reg tb_sel;
+  wire [2:0] tb_y;
+  
+  mux2_1 uut(
+    .i0(tb_i0),
+    .i1(tb_i1),
+    .sel(tb_sel),
+    .y(tb_y)
+  );
+  initial
+    begin
+      tb_i0 = 2'b00; tb_i1 = 2'b00; tb_sel = 0;
+      
+   // Display the output header for the console
+      $display("Time| sel | i0 | i1 | y");
+      $monitor("%g |%b| %b| %b | %b", $time, tb_sel, tb_i0, tb_i1, tb_y);
+  #10 tb_sel=0; tb_i0=3'b000; tb_i1=3'b001;
+      
+  #10 tb_sel=1; tb_i0= 3'b000; tb_i1=3'b001;
+      
+  #10 $finish;
+    end    
+endmodule
