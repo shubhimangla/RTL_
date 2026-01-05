@@ -1,0 +1,31 @@
+module halfadd_tb;
+  reg tb_a;
+  reg tb_b;
+  wire tb_sum;
+  wire tb_carry;
+  
+  halfadd uut(
+    .a(tb_a),
+    .b(tb_b),
+    .sum(tb_sum),
+    .carry(tb_carry)
+  );
+
+  initial 
+    begin
+    $display ("time | a | b| sum| carry|");
+      // Case-1
+      #10 tb_a= 1'b 0; tb_b=1'b0;
+      $strobe("%0t|%b|%b|%b|%b" , $time, tb_a, tb_b , tb_sum, tb_carry);
+      // Case-2
+      #10 tb_a= 1'b 0; tb_b=1'b1;
+      $strobe("%0t|%b|%b|%b|%b" , $time, tb_a, tb_b , tb_sum, tb_carry);
+      // Case-3
+       #10 tb_a= 1'b 1; tb_b=1'b0;
+      $strobe("%0t|%b|%b|%b|%b" , $time, tb_a, tb_b , tb_sum, tb_carry);
+      // Case-4
+       #10 tb_a= 1'b 1; tb_b=1'b1;
+      $strobe("%0t|%b|%b|%b|%b" , $time, tb_a, tb_b , tb_sum, tb_carry);
+      end
+endmodule
+endmodule
