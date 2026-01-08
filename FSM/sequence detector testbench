@@ -1,0 +1,42 @@
+module seq_detect_tb;
+  reg clk;
+  reg rst;
+  reg din;
+  wire dout;
+  
+  seq_detect uut(
+    .clk(clk),
+    .rst(rst),
+    .din(din),
+    .dout(dout)
+  );
+  
+  always #5 clk=~clk;
+   initial begin
+     clk = 0;
+     rst = 1;
+     din = 0;
+    #20;
+    rst=0;
+     @(posedge clk); din = 1; 
+     @(posedge clk); din = 0;
+     @(posedge clk); din = 1; 
+     @(posedge clk); din = 0; 
+     @(posedge clk); din = 1;
+     
+     @(posedge clk); din = 1;
+    #2 rst = 1;              
+    #10 rst = 0;
+
+    #50;
+    $stop; 
+  end
+     initial
+       begin
+    $monitor("Time=%0t | rst=%b | din=%b | state=%b | dout=%b", 
+             $time, rst, din, uut.current_state, dout);
+  end
+
+endmodule
+     
+     
