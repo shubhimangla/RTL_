@@ -1,0 +1,9 @@
+SPI Master with SystemVerilog Interface
+This repository contains a parameterized SPI (Serial Peripheral Interface) Master implementation. 
+It utilizes SystemVerilog Interfaces and Modports to simplify connectivity and improve modularity between the Master and Slave components.
+
+Features
+Parameterized Data Width: Default is 8-bit, but can be configured for any word length.
+SystemVerilog Interface: Uses spi_if to group sclk, mosi, miso, and ss_n signals.
+State Machine Driven: Robust 4-state FSM (IDLE, LOAD, TRANSFER, DONE).
+Mode 0 Support: Logic is designed for CPOL=0, CPHA=0 (data sampled on rising edge, shifted on falling edge).
