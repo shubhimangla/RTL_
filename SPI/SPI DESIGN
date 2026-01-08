@@ -1,0 +1,82 @@
+// Implement SPI Protocol
+interface spi_if (input logic clk);
+  logic sclk, mosi, miso, ss_n;
+  
+  modport master(output sclk, mosi, ss_n, input miso);
+  modport slave (input sclk, mosi, ss_n, output miso);
+  
+endinterface
+
+module spi_master #(parameter WIDTH=8)
+(
+  input logic clk,
+  input logic rst,
+  input logic start,
+  input logic [WIDTH-1:0] tx_data,
+  spi_if.master spi_bus
+);
+  
+  typedef enum logic[1:0]{ IDLE,LOAD, TRANSFER, DONE} state_t;
+  state_t state, next_state;
+  
+  logic [WIDTH-1:0] shift_reg;
+  logic [$clog2(WIDTH):0] count;
+  
+  always_ff @(posedge clk or posedge rst)
+    begin 
+      if(rst)
+        begin
+      state         <= IDLE;
+      spi_bus.sclk  <= 0;
+      spi_bus.mosi  <= 0;
+      spi_bus.ss_n  <= 1; // Slave Select is active low, so idle is 1
+      count         <= 0;
+      shift_reg     <= 0;
+    end 
+      else 
+        begin
+      state <= next_state; // Transition to next state
+      case (state)
+        IDLE: begin
+          spi_bus.ss_n <= 1;
+          spi_bus.sclk <= 0;
+          count        <= 0;
+        end
+
+        LOAD: begin
+          shift_reg    <= tx_data; // Capture parallel data
+          spi_bus.ss_n <= 0;       // Activate Slave Select
+        end
+        TRANSFER: begin
+          // Generate sclk by toggling it
+          spi_bus.sclk <= ~spi_bus.sclk; 
+
+          // We only shift data on one edge of the sclk
+          // If sclk was 1 and we just toggled to 0 (falling edge)
+          if (spi_bus.sclk == 1) begin
+            spi_bus.mosi <= shift_reg[WIDTH-1]; // Drive MSB
+            shift_reg    <= {shift_reg[WIDTH-2:0], 1'b0}; // Shift left
+            count        <= count + 1;
+          end
+        end
+
+        DONE: begin
+          spi_bus.ss_n <= 1; // Deactivate Slave
+        end
+      endcase
+    end
+  end
+    
+  
+  always_comb
+    begin
+      case (state)
+        IDLE: next_state= start ? LOAD: IDLE;
+        LOAD: next_state= TRANSFER;
+        TRANSFER: next_state= (count==	WIDTH-1) ? DONE : TRANSFER;
+        DONE: next_state= IDLE;
+        default: next_state= IDLE;
+          endcase
+          end
+          endmodule        
+          
