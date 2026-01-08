@@ -1,0 +1,57 @@
+module tb_spi;
+  logic clk;
+  logic rst;
+  logic start;
+  logic [7:0] data_to_send;
+  //  Instantiate clock
+  initial 
+    begin 
+      clk=0;
+      forever #5 clk=~clk;
+    end
+  // Instantiate interface
+  spi_if intf(clk);
+  
+  // Instantiate Master Interface
+  spi_master #(.WIDTH(8)) dut(
+    .clk(clk),
+    .rst(rst),
+    .tx_data(data_to_send),
+    .start(start),
+    .spi_bus(intf.master)
+  );
+  
+  // TEST STIMULUS 
+  initial 
+    begin
+      rst=1; start=0; data_to_send=8'h0;
+    #20 rst=0;
+    send_data(8'hA5);
+
+    // Wait and finish
+    #200;
+    $display("--- Simulation Finished at %t ---", $time);
+    $finish;
+  end
+  
+  // Task to simplify driving the transaction
+  task send_data(input [7:0] data);
+    @(posedge clk);
+    data_to_send = data;
+    start = 1;
+    $display("Driving Data: %h", data);
+    @(posedge clk);
+    start = 0;
+    // Wait until FSM returns to IDLE state
+    wait(dut.state == dut.IDLE);
+    $display("Transmission Complete");
+  endtask
+
+  // 6. Monitor signals in the console
+  initial begin
+    $monitor("Time: %t | State: %s | SCLK: %b | MOSI: %b | SS_N: %b", 
+              $time, dut.state.name(), intf.sclk, intf.mosi, intf.ss_n);
+  end
+
+endmodule
+  
