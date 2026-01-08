@@ -1,0 +1,25 @@
+Time:                    0 | State: IDLE | SCLK: 0 | MOSI: 0 | SS_N: 1
+Driving Data: a5
+Time:                   25 | State: LOAD | SCLK: 0 | MOSI: 0 | SS_N: 1
+Time:                   35 | State: TRANSFER | SCLK: 0 | MOSI: 0 | SS_N: 0
+Time:                   45 | State: TRANSFER | SCLK: 1 | MOSI: 0 | SS_N: 0
+Time:                   55 | State: TRANSFER | SCLK: 0 | MOSI: 1 | SS_N: 0
+Time:                   65 | State: TRANSFER | SCLK: 1 | MOSI: 1 | SS_N: 0
+Time:                   75 | State: TRANSFER | SCLK: 0 | MOSI: 0 | SS_N: 0
+Time:                   85 | State: TRANSFER | SCLK: 1 | MOSI: 0 | SS_N: 0
+Time:                   95 | State: TRANSFER | SCLK: 0 | MOSI: 1 | SS_N: 0
+Time:                  105 | State: TRANSFER | SCLK: 1 | MOSI: 1 | SS_N: 0
+Time:                  115 | State: TRANSFER | SCLK: 0 | MOSI: 0 | SS_N: 0
+Time:                  125 | State: TRANSFER | SCLK: 1 | MOSI: 0 | SS_N: 0
+Time:                  135 | State: TRANSFER | SCLK: 0 | MOSI: 0 | SS_N: 0
+Time:                  145 | State: TRANSFER | SCLK: 1 | MOSI: 0 | SS_N: 0
+Time:                  155 | State: TRANSFER | SCLK: 0 | MOSI: 1 | SS_N: 0
+Time:                  165 | State: TRANSFER | SCLK: 1 | MOSI: 1 | SS_N: 0
+Time:                  175 | State: TRANSFER | SCLK: 0 | MOSI: 0 | SS_N: 0
+Time:                  185 | State: DONE | SCLK: 1 | MOSI: 0 | SS_N: 0
+Transmission Complete
+Time:                  195 | State: IDLE | SCLK: 1 | MOSI: 0 | SS_N: 1
+Time:                  205 | State: IDLE | SCLK: 0 | MOSI: 0 | SS_N: 1
+--- Simulation Finished at                  395 ---
+Simulation complete via $finish(1) at time 395 NS + 0
+./testbench.sv:35     $finish;
