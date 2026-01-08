@@ -1,0 +1,12 @@
+Time=0 | rst=1 | din=0 | state=00 | dout=0
+Time=20 | rst=0 | din=0 | state=00 | dout=0
+Time=25 | rst=0 | din=1 | state=00 | dout=0
+Time=35 | rst=0 | din=0 | state=01 | dout=0
+Time=45 | rst=0 | din=1 | state=10 | dout=0
+Time=55 | rst=0 | din=0 | state=11 | dout=1
+Time=65 | rst=0 | din=1 | state=10 | dout=0
+Time=75 | rst=0 | din=1 | state=11 | dout=1
+Time=77 | rst=1 | din=1 | state=00 | dout=0
+Time=87 | rst=0 | din=1 | state=00 | dout=0
+Time=95 | rst=0 | din=1 | state=01 | dout=0
+testbench.sv:33: $stop called at 137 (1s)
