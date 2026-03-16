@@ -1,0 +1,406 @@
+`timescale 1ns / 1ps
+module butterfly_top(
+  input signed [21:0] a_real, // input A - Real part of A
+  input signed [21:0] a_img, // input A- Imaginary part of A 
+  input signed [21:0] b_real,// input B-Real part of B
+  input signed [21:0] b_img, // input B- Imaginary part of B  
+  input signed [15:0] twid_cos, // cos_theta from  LUT
+  input signed [15:0] twid_sin, // sin_theta  from  LUT
+  output signed [21:0] out_a_real,
+  output signed [21:0] out_a_img,
+  output signed [21:0] out_b_real,
+  output signed [21:0] out_b_img
+);
+  // Internal wires for B*W
+  wire signed [21:0] bw_real;
+  wire signed [21:0] bw_img;
+  // Instantiate the butterfly mult module
+  butterfly_mult multiplier_inst(
+    .data_real(b_real),
+    .data_img(b_img),
+    .cos_theta(twid_cos),
+    .sin_theta(twid_sin),
+    .final_real(bw_real),
+    .final_img(bw_img)
+  );
+  // Addition stage: Output A = A+(B*w)
+  assign out_a_real=(a_real + bw_real)>>>1;
+  assign out_a_img =(a_img + bw_img)>>>1;
+  // Subtraction stage: Output A = A- (B*w)
+  assign out_b_real=(a_real- bw_real)>>>1;
+  assign out_b_img =(a_img - bw_img)>>>1;
+
+endmodule
+// Design a Look up tabe- also called ROM -LUT For values of Cos theta and sin theta
+module LUT(
+  input [4:0] addr, // 2^X= N; where N is the No of points we need in our unit circle . 
+  output reg signed [15:0] cos_theta, // Used Q format for handling decimal numbers. Here Q1.15 format is used
+  output reg signed [15:0] sin_theta
+);
+  always @(*) 
+    begin 
+    case(addr) 
+      // values cos (2*pi*K/32) and -sin(2*pi*k/32)0
+      // Quadrant-1 cos-+ , sin - (cos_theta - jsin_theta)
+      5'd0: begin cos_theta=16'h7FFF; sin_theta=16'h0000; end // 0
+      5'd1: begin cos_theta=16'h7D8A; sin_theta=16'hE707; end // 11.25
+      5'd2: begin cos_theta=16'h7641; sin_theta=16'hCF05; end // 22.5
+      5'd3: begin cos_theta=16'h6A6D; sin_theta=16'hB8E4; end // 33.75
+      5'd4: begin cos_theta=16'h5A82; sin_theta=16'hA57E; end // 45
+      5'd5: begin cos_theta=16'h471C; sin_theta=16'h9593; end // 56.25
+      5'd6: begin cos_theta=16'h30FB; sin_theta=16'h89BF; end // 67.5
+      5'd7: begin cos_theta=16'h18F9; sin_theta=16'h8276; end // 78.75
+      //Quadrant-2 cos - , sin -
+      5'd8: begin cos_theta=16'h0000; sin_theta=16'h8000; end // 90
+      5'd9: begin cos_theta=16'hE707; sin_theta=16'h8276; end // 101.25
+      5'd10: begin cos_theta=16'hCF05; sin_theta=16'h89BF; end //112.5
+      5'd11: begin cos_theta=16'hB8E4; sin_theta=16'h9593; end // 123.75
+      5'd12: begin cos_theta=16'hA57E; sin_theta=16'hA57E; end // 135
+      5'd13: begin cos_theta=16'h9593; sin_theta=16'hB8E4; end //146.25
+      5'd14: begin cos_theta=16'h89BF; sin_theta=16'hCF05; end // 157.5
+      5'd15: begin cos_theta=16'h8276; sin_theta=16'hE707; end // 168.75
+      //Quadrant-3 cos - , sin +
+      5'd16: begin cos_theta=16'h8000; sin_theta=16'h0000; end // 180
+      5'd17: begin cos_theta=16'h8276; sin_theta=16'h18F9; end // 191.25
+      5'd18: begin cos_theta=16'h89BF; sin_theta=16'h30FB; end // 202.5
+      5'd19: begin cos_theta=16'h9593; sin_theta=16'h471C; end // 213.75
+      5'd20: begin cos_theta=16'hA57E; sin_theta=16'h5A82; end // 225
+      5'd21: begin cos_theta=16'hB8E4; sin_theta=16'h6A6D; end // 236.25
+      5'd22: begin cos_theta=16'hCF05; sin_theta=16'h7641; end // 247.5
+      5'd23: begin cos_theta=16'hE707; sin_theta=16'h7D8A; end // 258.75
+      //Quadrant-4 cos + , sin +
+      5'd24: begin cos_theta=16'h0000; sin_theta=16'h7FFF; end // 270
+      5'd25: begin cos_theta=16'h18F9; sin_theta=16'h7D8A; end // 281.25
+      5'd26: begin cos_theta=16'h30FB; sin_theta=16'h7641; end // 292.5
+      5'd27: begin cos_theta=16'h471C; sin_theta=16'h6A6D; end // 303.75
+      5'd28: begin cos_theta=16'h5A82; sin_theta=16'h5A82; end // 315
+      5'd29: begin cos_theta=16'h6A6D; sin_theta=16'h471C; end // 326.25
+      5'd30: begin cos_theta=16'h7641; sin_theta=16'h30FB; end // 337.5
+      5'd31: begin cos_theta=16'h7D8A; sin_theta=16'h18F9; end // 348.75
+      default: begin cos_theta=16'h7FFF; sin_theta=16'h0000; end 
+    endcase
+    end
+endmodule
+
+//Perform multiplication- B*W
+module butterfly_mult(
+  input signed [21:0] data_real,
+  input signed [21:0] data_img,
+  input signed [15:0] cos_theta,
+  input  signed [15:0] sin_theta,
+  output signed [21:0] final_real,
+  output signed [21:0] final_img
+);
+// Internal wire to hold 32-bit products
+  wire  signed [37:0] real_real, img_img , real_img, img_real;
+  wire signed [37:0] final_real_32 , final_img_32;
+
+// Performing the multiplication table
+// Generate 4 partial products
+assign real_real=data_real * cos_theta;
+assign img_img= data_img *sin_theta;
+assign real_img= data_real*sin_theta;
+assign img_real= data_img*cos_theta;
+
+// Combine partial products        
+  assign final_real_32=$signed(real_real)-$signed(img_img);
+  assign final_img_32=$signed(img_real) + $signed(real_img);
+
+//Convergent Rounding
+  wire signed [38:0] rounded_real = final_real_32 + 39'sd16384; // 1 << 14
+  wire signed [38:0] rounded_img  = final_img_32  + 39'sd16384; // 1 << 14
+//Final truncation
+  assign final_real= rounded_real[36:15];
+  assign final_img= rounded_img[36:15];
+
+endmodule
+
+// Wrapper module that defines the three stages in our butterfly operation
+module fft_32pt_top(
+  // Inputs - Real and imaginary part of the input
+  input signed[15:0] in_r[0:31],
+  input signed[15:0] in_i[0:31],
+  // Outputs- Real and imaginary part of the output
+  output signed[15:0] out_r[0:31],
+  output signed[15:0] out_i[0:31],
+  output reg is_low_freq,  // '1' if low freq > high freq
+  output reg is_mid_freq, // '1' if high freq > low freq
+  output reg is_high_freq
+  
+);
+
+  // Internal wires for stage to stage connection
+  //[ Stage index 0 to 5 ] [Bin index 0 to 31]
+  wire signed [21:0] s_r[0:5][0:31];
+  wire signed [21:0] s_i[0:5][0:31];
+  
+  genvar k;
+  generate
+    for(k=0;k<32;k=k+1) begin:input_init
+      assign s_r[0][k]=in_r[k];
+      assign s_i[0][k]=in_i[k];
+    end
+  endgenerate
+      
+  
+  
+  // Instantiate LUTs for the required twiddles (w^0, w^1, w^2, w^3)
+  genvar stage,group,bfly;
+  generate
+    for (stage=1; stage<=5; stage=stage+1)
+      begin:fft_stages
+      localparam int step= 1 << stage;// Distance between blocks like 2, 4, 8, 16, 32
+        localparam half_step = 1<<(stage-1);// in distance between the blocks how many pairs are there.
+        for(group=0; group<32 ; group=group+step) begin:groups
+          for(bfly=0; bfly<half_step; bfly=bfly+1) begin:butterflies
+            wire [4:0] tw_addr = (bfly*32)/(1<<stage);
+            wire signed [15:0] current_twid_cos, current_twid_sin;
+            
+            LUT twiddle_inst (
+                        .addr(tw_addr),
+                        .cos_theta(current_twid_cos),
+                        .sin_theta(current_twid_sin)
+                    );
+            
+            
+            butterfly_top bf(
+              .a_real(s_r[stage-1][group+bfly]),
+              .a_img(s_i[stage-1][group+bfly]),
+              .b_real(s_r[stage-1][group+bfly+half_step]),
+              .b_img(s_i[stage-1][group+bfly+half_step]),
+              .twid_cos(current_twid_cos),
+              .twid_sin(current_twid_sin),
+              .out_a_real(s_r[stage][group+bfly]),
+              .out_a_img(s_i[stage][group+bfly]),
+              .out_b_real(s_r[stage][group+bfly+half_step]),
+              .out_b_img(s_i[stage][group+bfly+half_step])
+              
+            );
+          end
+        end
+      end
+  endgenerate
+ // Output assignment 
+  genvar i;
+  generate
+    for(i=0; i<32; i=i+1) begin: output_assignment
+      assign out_r[i]=s_r[5][i];
+      assign out_i[i]=s_i[5][i];
+    end     
+  endgenerate         
+ 
+  // calculation of magnitude so that separation of high and low frequencies can take place.
+  
+  // Low frequency calculation at Bin1 and Bin7
+  wire  [39:0] total_low_freq=
+  ((out_r[16]*out_r[16]) + (out_i[16]*out_i[16]))+  // Bin 1 
+  ((out_r[31]*out_r[31]) + (out_i[31]*out_i[31]))+   // Bin 31 
+  ((out_r[8]*out_r[8]) + (out_i[8]*out_i[8])) +     // Bin 2
+  ((out_r[15]*out_r[15]) + (out_i[15]*out_i[15]))+  // Bin 30
+  ((out_r[24]*out_r[24]) + (out_i[24]*out_i[24])) + // Bin 3
+  ((out_r[23]*out_r[23]) + (out_i[23]*out_i[23]));  // Bin 29
+  
+  // Mid-frequency range calculation
+  wire [39:0] total_mid_freq=
+  ((out_r[4]*out_r[4]) + (out_i[4]*out_i[4])) +       // Bin 4
+  ((out_r[20]*out_r[20]) + (out_i[20]*out_i[20]))+    //Bin 5
+  ((out_r[12]*out_r[12]) + (out_i[12]*out_i[12])) +   // Bin 6
+  ((out_r[28]*out_r[28]) + (out_i[28]*out_i[28])) +   // Bin 7
+  ((out_r[2]*out_r[2]) + (out_i[2]*out_i[2])) +       //Bin 8
+  ((out_r[14]*out_r[14]) + (out_i[14]*out_i[14]))+    // Bin 25
+  ((out_r[11]*out_r[11]) + (out_i[11]*out_i[11])) +   // Bin 26
+  ((out_r[27]*out_r[27]) + (out_i[27]*out_i[27]))+    //Bin 27
+  ((out_r[7]*out_r[7]) + (out_i[7]*out_i[7]));        // Bin 28
+                                                     
+   //High frequency calculation at Bin 5 and Bin3
+  wire [39:0] total_high_freq=
+  ((out_r[5]*out_r[5])   + (out_i[5]*out_i[5]))   + // Bin 10
+  ((out_r[21]*out_r[21]) + (out_i[21]*out_i[21])) + // Bin 11
+  ((out_r[13]*out_r[13]) + (out_i[13]*out_i[13])) + // Bin 12
+  ((out_r[29]*out_r[29]) + (out_i[29]*out_i[29])) + // Bin 13
+  ((out_r[3]*out_r[3])   + (out_i[3]*out_i[3]))   + // Bin 14
+  ((out_r[19]*out_r[19]) + (out_i[19]*out_i[19])) + // Bin 15
+  ((out_r[1]*out_r[1])   + (out_i[1]*out_i[1]))   + // Bin 16 (Nyquist)
+  ((out_r[17]*out_r[17]) + (out_i[17]*out_i[17])) + // Bin 17
+  ((out_r[9]*out_r[9])   + (out_i[9]*out_i[9]));    // Bin 18
+  
+  
+
+ // Comparator and status flag generation
+  
+  always@(*) begin
+    // Default all the values to zero
+    is_low_freq=1'b0;
+    is_mid_freq=1'b0;
+    is_high_freq=1'b0;
+    
+    if(total_low_freq >= total_mid_freq && total_low_freq >= total_high_freq)
+      begin
+      is_low_freq=1'b1;
+      end
+    else if(total_mid_freq >= total_low_freq && total_mid_freq >= total_high_freq)
+      begin
+      is_mid_freq=1'b1;
+      end
+    else begin
+      is_high_freq=1'b1;
+    end
+  end
+endmodule
+
+module spectral_fir_filter(
+  input clk,
+  input rst,
+  input [4:0] bin_index,
+  input signed [15:0] bin_magnitude, // Input is the result of fft output that is their magnitude
+  output wire signed  [15:0] smoothed_magnitude_out  //Output is the smoothed magnitude. 
+);
+  // Using LPF coefficients by using a specific formula 
+  parameter signed [15:0]B0 = -16'd150,  B1 = -16'd200,  B2 = 16'd100, 
+                        B3 = 16'd1500,  B4 = 16'd3500,  B5 = 16'd4800,
+                        B6 = 16'd4800,  B7 = 16'd3500,  B8 = 16'd1500, 
+                        B9 = 16'd100,   B10= -16'd200,  B11= -16'd150;
+  // Creating an array of 12 slots and each slot has a size of 16 bit.This array stores the delays 
+  reg signed [15:0] x [0:10] ;
+  integer j;
+  initial begin
+    for(j=0; j<11; j=j+1) 
+      begin
+        x[j] = 16'd0;
+    end
+end
+  // Sequential nature of the design 
+  always @(posedge clk)
+    begin
+      if(rst) begin
+        for(j=0; j<11;j=j+1)
+          x[j]<=16'd0;
+          end
+      else begin
+       x[0]  <= bin_magnitude ;
+        for (j=1; j<11 ;j=j+1) 
+       x[j] <= x[j-1];
+      end
+    end
+     
+   // Weighted Sum :Smoothing effect
+ wire signed [35:0] immediate_sum;
+  assign immediate_sum= (bin_magnitude*B0)+
+    (x[0]*B1)+
+    (x[1]*B2)+
+    (x[2]*B3)+
+    (x[3]*B4)+
+    (x[4]*B5)+
+    (x[5]*B6)+
+    (x[6]*B7)+
+    (x[7]*B8)+
+    (x[8]*B9)+
+    (x[9]*B10)+
+    (x[10]*B11);
+  reg signed [15:0] smoothed_mag_reg;
+
+    always @(posedge clk) begin
+        if (rst) begin
+            smoothed_mag_reg <= 16'sd0;
+        end else begin
+            // The result of the math is stored on the clock edge
+          smoothed_mag_reg <= $signed(immediate_sum >>>13);
+        end
+    end
+     //always @(posedge clk) begin
+     //if(rst==1) begin
+      //smoothed_magnitude_out<=16'd0;
+    //end
+    //else begin
+  assign smoothed_magnitude_out =smoothed_mag_reg; //(bin_index > 5'd11) ? 16'sd0 : smoothed_mag_reg; 
+
+endmodule
+  
+  
+
+module top_level_system (
+    input clk,
+    input rst,
+    // Input 32-bin parallel data
+    input signed [15:0] sys_in_r [0:31],
+    input signed [15:0] sys_in_i [0:31],
+    
+    // Status Outputs
+    output low_detected,
+    output mid_detected,
+    output high_detected,
+    
+    // FIR Output
+    output signed [15:0] smoothed_magnitude_out,
+    output [4:0] current_bin_index // Tells the user which bin is currently being output
+);
+
+    // 1. Internal wires for FFT results
+    wire signed [15:0] fft_result_r [0:31];
+    wire signed [15:0] fft_result_i [0:31];
+
+    // 2. Instantiate the 32-point FFT core
+    fft_32pt_top my_fft_inst (
+        .in_r(sys_in_r),
+        .in_i(sys_in_i),
+        .out_r(fft_result_r),
+        .out_i(fft_result_i),
+        .is_low_freq(low_detected),
+        .is_mid_freq(mid_detected),
+        .is_high_freq(high_detected)
+    );
+
+    // 3. Serialization Logic (Convert Parallel FFT to Serial FIR Input)
+   // reg [4:0] bin_cnt;
+    //always @(posedge clk) begin
+        //if (rst) bin_cnt <= 5'd0;
+       // else bin_cnt <= bin_cnt + 5'd1;
+    //end
+    
+    //assign current_bin_index = bin_cnt;
+  reg [4:0] bin_cnt;
+    wire [4:0] rev_idx; // The bit-reversed version of the counter
+
+    // Bit-reverse the bin_cnt to access the correct FFT memory location
+    assign rev_idx = {bin_cnt[0], bin_cnt[1], bin_cnt[2], bin_cnt[3], bin_cnt[4]};
+
+    always @(posedge clk) begin
+        if (rst) bin_cnt <= 5'd0;
+        else bin_cnt <= bin_cnt + 5'd1;
+    end
+    
+    assign current_bin_index = bin_cnt;
+
+    // 4. Approximate Magnitude Calculation (|Real| + |Imag|)
+    // This feeds the FIR filter
+    wire signed [15:0] selected_r = fft_result_r[rev_idx];
+    wire signed [15:0] selected_i = fft_result_i[rev_idx];
+   
+
+    // Truncate or scale to 16-bit for the FIR filter input
+    // Taking bits [30:15] is a common way to scale down power value
+    //wire [31:0] r_sq = selected_r * selected_r;
+    //wire [31:0] i_sq = selected_i * selected_i;
+   // wire [31:0] full_mag = r_sq + i_sq; // This defines the missing wire
+   wire [15:0] abs_r = (selected_r[15]) ? -selected_r : selected_r;
+   wire [15:0] abs_i = (selected_i[15]) ? -selected_i : selected_i;
+   wire [15:0] max_val = (abs_r > abs_i) ? abs_r : abs_i;
+   wire [15:0] min_val = (abs_r > abs_i) ? abs_i : abs_r;
+   wire [15:0] serial_magnitude;
+// 0.375 is approx (1/4 + 1/8)
+  assign serial_magnitude = max_val + (min_val>>2) + (min_val>>3);
+
+   // wire [15:0] serial_magnitude = abs_r + abs_i;
+   // wire [15:0] serial_magnitude = full_mag[23:8];
+
+
+    // 5. Instantiate the Spectral FIR Filter
+    spectral_fir_filter my_fir_inst (
+        .clk(clk),
+        .rst(rst),
+        .bin_index(bin_cnt),
+        .bin_magnitude(serial_magnitude),
+        .smoothed_magnitude_out(smoothed_magnitude_out)
+    );
+
+endmodule
