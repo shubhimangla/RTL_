@@ -1,0 +1,68 @@
+module spectral_fir_filter(
+  input clk,
+  input rst,
+  input [4:0] bin_index,
+  input signed [15:0] bin_magnitude, // Input is the result of fft output that is their magnitude
+  output wire signed  [15:0] smoothed_magnitude_out  //Output is the smoothed magnitude. 
+);
+  // Using LPF coefficients by using a specific formula 
+  parameter signed [15:0]B0 = -16'd150,  B1 = -16'd200,  B2 = 16'd100, 
+                        B3 = 16'd1500,  B4 = 16'd3500,  B5 = 16'd4800,
+                        B6 = 16'd4800,  B7 = 16'd3500,  B8 = 16'd1500, 
+                        B9 = 16'd100,   B10= -16'd200,  B11= -16'd150;
+  // Creating an array of 12 slots and each slot has a size of 16 bit.This array stores the delays 
+  reg signed [15:0] x [0:10] ;
+  integer j;
+  initial begin
+    for(j=0; j<11; j=j+1) 
+      begin
+        x[j] = 16'd0;
+    end
+end
+  // Sequential nature of the design 
+  always @(posedge clk)
+    begin
+      if(rst) begin
+        for(j=0; j<11;j=j+1)
+          x[j]<=16'd0;
+          end
+      else begin
+       x[0]  <= bin_magnitude ;
+        for (j=1; j<11 ;j=j+1) 
+       x[j] <= x[j-1];
+      end
+    end
+     
+   // Weighted Sum :Smoothing effect
+ wire signed [35:0] immediate_sum;
+  assign immediate_sum= (bin_magnitude*B0)+
+    (x[0]*B1)+
+    (x[1]*B2)+
+    (x[2]*B3)+
+    (x[3]*B4)+
+    (x[4]*B5)+
+    (x[5]*B6)+
+    (x[6]*B7)+
+    (x[7]*B8)+
+    (x[8]*B9)+
+    (x[9]*B10)+
+    (x[10]*B11);
+  reg signed [15:0] smoothed_mag_reg;
+
+    always @(posedge clk) begin
+        if (rst) begin
+            smoothed_mag_reg <= 16'sd0;
+        end else begin
+            // The result of the math is stored on the clock edge
+          smoothed_mag_reg <= $signed(immediate_sum >>>13);
+        end
+    end
+     //always @(posedge clk) begin
+     //if(rst==1) begin
+      //smoothed_magnitude_out<=16'd0;
+    //end
+    //else begin
+  assign smoothed_magnitude_out = (bin_index >= 5'd12) ? 16'sd0 : smoothed_mag_reg;; //Scaling back to 16 bit.
+    
+
+endmodule
