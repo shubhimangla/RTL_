@@ -1,0 +1,487 @@
+`timescale 1ns / 1ps
+`include "uvm_macros.svh" 
+import uvm_pkg::*;
+
+// --- Global Types and Reference Functions ---
+typedef struct {
+    real re;
+    real im;
+} complex_t;
+
+function automatic void reference_dft(
+    input logic signed [15:0] in_r [32],
+    input logic signed [15:0] in_i [32],
+    output complex_t out [32]
+);
+    longint scale = 16384;
+    real pi = 3.141592653589;
+    //for (int k = 0; k < 32; k++) begin
+        //out[k].re = 0;
+        //out[k].im = 0;
+        //for (int n = 0; n < 32; n++) begin
+            //real angle = 2.0 * pi * k * n / 32.0;
+            //out[k].re += real'(in_r[n]) * $cos(angle) + real'(in_i[n]) * $sin(angle);
+            //out[k].im += real'(in_i[n]) * $cos(angle) - real'(in_r[n]) * $sin(angle);
+        //end
+      //end
+//endfunction
+  for (int k = 0; k < 32; k++) begin
+        longint acc_re = 0;
+        longint acc_im = 0;
+        for (int n = 0; n < 32; n++) begin
+            real angle = 2.0 * pi * k * n / 32.0;
+            // Mimic hardware LUT/Fixed-point trig
+            longint cos_fixed = longint'($cos(angle) * scale);
+            longint sin_fixed = longint'($sin(angle) * scale);
+            
+            acc_re += (longint'(in_r[n]) * cos_fixed + longint'(in_i[n]) * sin_fixed) / scale;
+            acc_im += (longint'(in_i[n]) * cos_fixed - longint'(in_r[n]) * sin_fixed) / scale;
+        end
+        out[k].re = real'(acc_re);
+        out[k].im = real'(acc_im);
+    end
+endfunction
+
+// --- Interface ---
+interface my_if(input logic clk, input logic rst);
+    logic signed [15:0] tb_in_r [0:31];
+    logic signed [15:0] tb_in_i [0:31];
+    logic low_detected, mid_detected, high_detected;
+    logic signed [15:0] smoothed_mag;
+    logic [4:0] current_bin;
+    
+    clocking mon_cb @(posedge clk);
+        default input #1ns output #1ns;
+        input smoothed_mag, current_bin, tb_in_r, tb_in_i;
+    endclocking
+endinterface
+
+
+// --- Top Module ---
+// --- Top Module ---
+module top;
+    bit clk;
+    bit rst;
+    // --- 1. Static Arrays for Waveform Dumping ---
+    logic signed [15:0] wave_input_r [32];
+    logic signed [15:0] wave_smoothed [32];
+
+    // 1. Clock Generation
+    always #5 clk = ~clk;
+
+    // 2. Interface and DUT Instantiation (Must be outside initial blocks)
+    my_if p_if(clk, rst);
+
+    top_level_system uut (
+        .clk(clk),
+        .rst(rst),
+        .sys_in_r(p_if.tb_in_r),
+        .sys_in_i(p_if.tb_in_i),
+        .low_detected(p_if.low_detected),
+        .mid_detected(p_if.mid_detected),
+        .high_detected(p_if.high_detected),
+        .smoothed_magnitude_out(p_if.smoothed_mag),
+        .current_bin_index(p_if.current_bin)
+    );
+   
+   initial 
+     begin
+        $dumpfile("dump.vcd"); // Creates the waveform file
+        $dumpvars(0, top);    // Dumps all signals in 'top' including our new arrays
+    end
+
+    // 3. UVM Configuration and Test Start
+    initial begin
+        uvm_config_db#(virtual my_if)::set(null, "uvm_test_top*", "vif", p_if);
+        run_test("my_test"); 
+    end
+
+    // 4. Reset Logic
+    initial begin
+        rst = 1;
+        #20;
+        rst = 0;
+    end
+endmodule // Make sure this is here before your classes start!
+// --- Sequence Item ---
+class my_sequence_item extends uvm_sequence_item;
+    `uvm_object_utils(my_sequence_item)
+
+    // --- Analysis/Control Fields ---
+    rand logic signed [15:0] tb_in_r [32];
+    rand logic signed [15:0] tb_in_i [32];
+
+    // --- Collection Fields ---
+    logic signed [15:0] frame_smoothed_mag [32];
+    logic [4:0] last_bin_index; 
+
+    // --- Constraints ---
+    constraint positive_values {
+        foreach (tb_in_r[i]) {
+            tb_in_r[i] >= 0; 
+            tb_in_r[i] <= 32767;
+        }
+        foreach (tb_in_i[i]) {
+            tb_in_i[i] >= 0;
+            tb_in_i[i] <= 32767;
+        }
+    }
+          
+    constraint reasonable_values {
+        foreach (tb_in_r[i]) tb_in_r[i] inside {[0 : 20000]}; 
+        foreach (tb_in_i[i]) tb_in_i[i] inside {[0 : 20000]};
+    }
+
+    function new(string name="my_sequence_item");
+        super.new(name);
+    endfunction
+
+    // --- NEW CHANGE: Helper function for the bracketed output ---
+    virtual function string input_to_string();
+        string s = "X[t]=[";
+        foreach (tb_in_r[i]) begin
+            s = {s, $sformatf("%0d", tb_in_r[i])};
+            if (i < 31) s = {s, ","}; // Add a comma for all except the last index
+        end
+        s = {s, "]"};
+        return s;
+    endfunction
+      
+      virtual function string output_to_string();
+        string s = "Smoothed_Mag=[";
+        foreach (frame_smoothed_mag[i]) begin
+            s = {s, $sformatf("%0d", frame_smoothed_mag[i])};
+            if (i < 31) s = {s, ","}; // Add comma for all but the last index
+        end
+        s = {s, "]"};
+        return s;
+    endfunction
+
+    // --- UPDATED CHANGE: Modify convert2string to use the new format ---
+    virtual function string convert2string();
+        // This combines both strings with a newline so they print on separate lines
+        return {input_to_string(), "\n", output_to_string()};
+    endfunction
+
+endclass
+// --- Master Sequence ---
+class master_sequence extends uvm_sequence #(my_sequence_item);
+    `uvm_object_utils(master_sequence)
+    
+    int num_iterations = 1; 
+    int total_test_cases =1;
+
+    function new(string name = "master_sequence");
+        super.new(name);
+    endfunction
+
+    virtual task body();
+    my_sequence_item item;
+    
+    // Ensure we get the latest config
+    if(!uvm_config_db#(int)::get(null, get_full_name(), "total_test_cases", total_test_cases)) begin
+        total_test_cases = 20; // Set a manual default higher than 1 to see changes
+    end
+    
+    `uvm_info("SEQ", $sformatf("Starting sequence with %0d iterations", total_test_cases), UVM_LOW)
+
+    repeat(total_test_cases) begin
+        item = my_sequence_item::type_id::create("item");
+        start_item(item);
+        
+        // CRITICAL: Check if randomization actually happens
+        if(!item.randomize()) begin
+            `uvm_error("SEQ", "Randomization failed!")
+        end else begin
+            // Optional: Print a small snippet to console to verify raw data is changing
+            `uvm_info("SEQ", $sformatf("Generated Input[0]: %0d", item.tb_in_r[0]), UVM_DEBUG)
+        end
+        
+        finish_item(item);
+    end
+endtask
+endclass
+// --- Driver ---
+class my_driver extends uvm_driver #(my_sequence_item);
+    `uvm_component_utils(my_driver)
+    virtual my_if vif;
+    
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
+
+    virtual function void build_phase(uvm_phase phase);
+        if(!uvm_config_db#(virtual my_if)::get(this, "", "vif", vif))
+            `uvm_fatal("DRV", "Could not get interface")
+    endfunction
+    
+    virtual task run_phase(uvm_phase phase);
+        forever begin
+            seq_item_port.get_next_item(req);
+            drive_item(req);
+            seq_item_port.item_done();
+        end
+    endtask
+    
+  task drive_item(my_sequence_item item);
+    // Drive the 32-point input bus
+    @(posedge vif.clk);
+    for (int i = 0; i < 32; i++) begin
+        vif.tb_in_r[i] <= item.tb_in_r[i];
+        vif.tb_in_i[i] <= item.tb_in_i[i];
+    end
+    
+    // Crucial: The RTL takes 32 clocks to serialize these inputs 
+    // through the Magnitude + FIR stages. We wait here so the 
+    // sequencer doesn't push the next 'item' too early.
+    repeat(31) @(posedge vif.clk); 
+endtask
+
+endclass
+
+// --- Monitor ---
+// --- Updated Monitor ---
+class my_monitor extends uvm_monitor;
+    `uvm_component_utils(my_monitor)
+    virtual my_if vif;
+    uvm_analysis_port #(my_sequence_item) item_collected_port;
+    
+    function new(string name="my_monitor", uvm_component parent);
+        super.new(name, parent);
+        item_collected_port = new("item_collected_port", this);
+    endfunction
+      
+    virtual function void build_phase(uvm_phase phase);
+        if(!uvm_config_db#(virtual my_if)::get(this, "", "vif", vif))
+            `uvm_fatal("MON", "Could not get interface")
+    endfunction
+     
+    virtual task run_phase(uvm_phase phase);
+        my_sequence_item item;
+        forever begin
+            @(vif.mon_cb);
+            if (!vif.rst) begin
+                
+                // 1. Start of a new FFT Frame
+                if (vif.mon_cb.current_bin == 0) begin
+                    item = my_sequence_item::type_id::create("item");
+                    // Capture inputs once per frame
+                    for (int i = 0; i < 32; i++) begin
+                        item.tb_in_r[i] = vif.mon_cb.tb_in_r[i];
+                        item.tb_in_i[i] = vif.mon_cb.tb_in_i[i];
+                    end
+                end
+
+                // 2. Continuous Collection
+                // Store the hardware's current magnitude output into the item array
+                if (item != null) begin
+                    item.frame_smoothed_mag[vif.mon_cb.current_bin] = vif.mon_cb.smoothed_mag;
+                end
+
+                // 3. End of Frame: Display, Dump to Waveform, and Send to Scoreboard
+                if (vif.mon_cb.current_bin == 31 && item != null) begin
+                    
+                    // Display results in the log window
+                    `uvm_info("MON_DATA", item.convert2string(), UVM_LOW)
+                    
+                    // --- UPDATED: Waveform Dumping Logic ---
+                    // Copy the class data to the static arrays in module 'top'
+                    foreach(item.tb_in_r[i]) begin
+                        top.wave_input_r[i]  = item.tb_in_r[i];
+                        top.wave_smoothed[i] = item.frame_smoothed_mag[i];
+                    end
+                    
+                    // Send the full frame to the scoreboard
+                    item_collected_port.write(item);
+                end
+            end
+        end
+    endtask
+endclass
+
+typedef uvm_sequencer #(my_sequence_item) my_sequencer;
+
+// --- Agent ---
+class my_agent extends uvm_agent;
+    `uvm_component_utils (my_agent)
+    my_driver    driver;
+    my_monitor   monitor;
+    my_sequencer sequencer;
+    
+    function new(string name="my_agent", uvm_component parent);
+        super.new(name, parent);
+    endfunction
+          
+    virtual function void build_phase(uvm_phase phase);
+        monitor = my_monitor::type_id::create("monitor", this);
+        if(get_is_active() == UVM_ACTIVE) begin
+            driver    = my_driver::type_id::create("driver", this);
+            sequencer = my_sequencer::type_id::create("sequencer", this);
+        end 
+    endfunction
+          
+    virtual function void connect_phase(uvm_phase phase);
+        if(get_is_active() == UVM_ACTIVE)
+            driver.seq_item_port.connect(sequencer.seq_item_export);
+    endfunction
+endclass
+
+// --- Scoreboard ---
+// --- Scoreboard ---
+// --- Scoreboard ---
+// --- Scoreboard ---
+// --- Scoreboard ---
+class my_scoreboard extends uvm_scoreboard;
+    `uvm_component_utils(my_scoreboard)
+ 
+    uvm_analysis_imp #(my_sequence_item, my_scoreboard) item_export;
+    
+    int prediction_pipe[$]; 
+    int unsigned mag_history[11];
+    int bin_history_pipe[$];
+    
+    shortint current_fft_r[32];
+    shortint current_fft_i[32];
+    
+    const int B[12] = '{-150, -200, 100, 1500, 3500, 4800, 4800, 3500, 1500, 100, -200, -150};
+  
+    real SAMPLING_RATE = 8000.0;
+    int  TOTAL_BINS    = 32;
+
+    function new(string name = "my_scoreboard", uvm_component parent = null);
+        super.new(name, parent);
+        item_export = new("item_export", this);
+        foreach(mag_history[i]) mag_history[i] = 0;
+    endfunction
+
+    // --- The Main Write Function ---
+    virtual function void write(my_sequence_item item);
+        complex_t dft_res[32]; 
+        string frame_report;
+        
+        reference_dft(item.tb_in_r, item.tb_in_i, dft_res);
+        
+        frame_report = $sformatf("\n--- FFT FRAME AT TIME %0t ---\n", $time);
+        frame_report = {frame_report, $sformatf("%-5s | %-12s | %10s | %12s | %-10s\n", 
+                       "Bin", "Frequency", "Act Mag", "Exp Mag", "Zone")};
+        frame_report = {frame_report, "------------------------------------------------------------\n"};
+
+        for (int i = 0; i < 32; i++) begin
+            current_fft_r[i] = shortint'($signed(int'(dft_res[i].re)) >>> 5);
+            current_fft_i[i] = shortint'($signed(int'(dft_res[i].im)) >>> 5);
+            
+            // Call the silent version to build the string
+            predict_and_compare_silent(i, current_fft_r, current_fft_i, item.frame_smoothed_mag[i], frame_report);
+        end
+
+        `uvm_info("SCB_FRAME", frame_report, UVM_LOW)
+    endfunction
+
+    // --- The Silent Prediction Logic ---
+    virtual function void predict_and_compare_silent(
+        bit [4:0] bin_cnt,
+        shortint  fft_r[32],
+        shortint  fft_i[32],
+        shortint  rtl_act,
+        ref string report  // Use 'ref' to modify the string from the write function
+    );
+        bit [4:0] rev_idx;
+        longint   immediate_sum;
+        int       expected_val;
+        bit [15:0] abs_r, abs_i, max_v, min_v, magnitude_in;
+        real      freq;  
+        string    zone;
+
+        // Bit-reversal for Bin indexing if your hardware uses it
+        rev_idx = {bin_cnt[0], bin_cnt[1], bin_cnt[2], bin_cnt[3], bin_cnt[4]};
+      
+        abs_r = (fft_r[rev_idx] < 0) ? -fft_r[rev_idx] : fft_r[rev_idx];
+        abs_i = (fft_i[rev_idx] < 0) ? -fft_i[rev_idx] : fft_i[rev_idx];
+        max_v = (abs_r > abs_i) ? abs_r : abs_i;
+        min_v = (abs_r > abs_i) ? abs_i : abs_r;
+
+        // Alpha-Max plus Beta-Min Magnitude Approximation
+        magnitude_in = shortint'(max_v + (min_v >> 2) + (min_v >> 3));
+
+        // FIR Filter Logic
+        immediate_sum = longint'($signed(magnitude_in) * $signed(B[0]));
+        for (int i = 0; i < 11; i++) begin
+            immediate_sum += longint'($signed(mag_history[i]) * $signed(B[i+1]));
+        end
+
+        expected_val = int'($signed(immediate_sum) >>> 13);
+        if (expected_val < 0)      expected_val = 0;
+        if (expected_val > 32767)  expected_val = 32767;
+
+        // Shift History
+        for (int i = 10; i > 0; i--) mag_history[i] = mag_history[i-1];
+        mag_history[0] = magnitude_in;
+
+        freq = bin_cnt * (SAMPLING_RATE / TOTAL_BINS);
+        zone = get_zone_label(freq);
+
+        // Append this bin's data to the report
+        report = {report, $sformatf("%-5d | %-12.2f | %10d | %12d | %-10s\n", 
+                  bin_cnt, freq, rtl_act, expected_val, zone)};
+    endfunction
+
+    function string get_zone_label(real freq);
+        if (freq < 1000.0) return "LOW";
+        if (freq < 2500.0) return "MID";
+        return "HIGH";
+    endfunction
+endclass
+// --- Environment ---
+class my_environment extends uvm_env;
+    `uvm_component_utils(my_environment)
+    my_agent agent;
+    my_scoreboard scoreboard;
+    
+    function new(string name, uvm_component parent);
+        super.new(name, parent);
+    endfunction
+    
+    virtual function void build_phase(uvm_phase phase);
+        agent = my_agent::type_id::create("agent", this);
+        scoreboard = my_scoreboard::type_id::create("scoreboard", this);
+    endfunction
+    
+    virtual function void connect_phase(uvm_phase phase);
+        agent.monitor.item_collected_port.connect(scoreboard.item_export);
+    endfunction
+endclass
+
+// --- Test ---
+class my_test extends uvm_test;
+  `uvm_component_utils(my_test)
+
+  my_environment env;
+
+  function new(string name = "my_test", uvm_component parent = null);
+    super.new(name, parent);
+  endfunction
+
+  virtual function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    env = my_environment::type_id::create("env", this);
+  endfunction
+
+  task run_phase(uvm_phase phase);
+    // Create the specialized sequence
+    master_sequence seq = master_sequence::type_id::create("seq");
+    
+    phase.raise_objection(this);
+   `uvm_info("TEST_TOP", "Starting Master Sequence (Randomized Input)", UVM_LOW)
+    
+    // Test 1: Sending a single tone aligned to Bin 4 (1000 Hz)
+    // This helps check for spectral leakage and pipeline alignment.
+    
+    
+    seq.start(env.agent.sequencer);
+
+    // Optional: Add a small delay to let the last frame clear the pipeline
+    #100ns;
+
+    phase.drop_objection(this);
+  endtask
+endclass
