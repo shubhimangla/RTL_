@@ -1,0 +1,109 @@
+FFT Output results  for x[n]=[1500,2500,2400,2000,500,150,650,1200,1800,2300,2600,2750,2650,2400,2000,1500,1000,400,250,100] REAL IMAGINARY, MAGNITUDE, CLASS
+Sampling Frequency (fs): 1000.00 Hz | Resolution: 31.25 Hz
+0      |     0.00 Hz  |      957 |        0 |     957.00 | DC
+1      |    31.25 Hz  |      848 |        0 |     848.00 | Low frequency
+2      |    62.50 Hz  |     -222 |      -55 |     228.71 | Low frequency
+3      |    93.75 Hz  |     -222 |       54 |     228.47 | Low frequency
+4      |   125.00 Hz  |      222 |      -67 |     231.89 | Low frequency
+5      |   156.25 Hz  |      145 |       10 |     145.34 | Low frequency
+6      |   187.50 Hz  |      145 |      -11 |     145.42 | Mid Frequency
+7      |   218.75 Hz  |      222 |       66 |     231.60 | Mid Frequency
+8      |   250.00 Hz  |      -45 |       18 |      48.47 | Mid Frequency
+9      |   281.25 Hz  |     -105 |       43 |     113.46 | Mid Frequency
+10     |   312.50 Hz  |       37 |       14 |      39.56 | Mid Frequency
+11     |   343.75 Hz  |       62 |       74 |      96.54 | High Frequency
+12     |   375.00 Hz  |       61 |      -74 |      95.90 | High Frequency
+13     |   406.25 Hz  |       36 |      -14 |      38.63 | High Frequency
+14     |   437.50 Hz  |     -105 |      -44 |     113.85 | High Frequency
+15     |   468.75 Hz  |      -45 |      -19 |      48.85 | High Frequency
+16     |   500.00 Hz  |      -19 |      -20 |      27.59 | High Frequency
+17     |   531.25 Hz  |      -53 |       -3 |      53.08 | High Frequency
+18     |   562.50 Hz  |        4 |      -23 |      23.35 | High Frequency
+19     |   593.75 Hz  |       21 |       11 |      23.71 | High Frequency
+20     |   625.00 Hz  |      -22 |      -34 |      40.50 | High Frequency
+21     |   656.25 Hz  |      -34 |        2 |      34.06 | High Frequency
+22     |   687.50 Hz  |      -93 |      -25 |      96.30 | Mid Frequency
+23     |   718.75 Hz  |      -57 |      -13 |      58.46 | Mid Frequency
+24     |   750.00 Hz  |      -57 |       11 |      58.05 | Mid Frequency
+25     |   781.25 Hz  |      -93 |       24 |      96.05 | Mid Frequency
+26     |   812.50 Hz  |      -35 |       -2 |      35.06 | Mid Frequency
+27     |   843.75 Hz  |      -22 |       34 |      40.50 | Low frequency
+28     |   875.00 Hz  |       20 |      -13 |      23.85 | Low frequency
+29     |   906.25 Hz  |        4 |       22 |      22.36 | Low frequency
+30     |   937.50 Hz  |      -54 |        2 |      54.04 | Low frequency
+31     |   968.75 Hz  |      -19 |       18 |      26.17 | Low frequency
+----------------------------
+	DETECTED:LOW FREQUENCY
+FFT Output results  for x[n]=[58000,61200,45000,59000,1200,8500,300,4000,63000,52000,48000,65535,2500,150,9000,3200,55000,49000,60000,42000] REAL IMAGINARY, MAGNITUDE, CLASS
+Sampling Frequency (fs): 1000.00 Hz | Resolution: 31.25 Hz
+0      |     0.00 Hz  |    -3121 |        0 |    3121.00 | DC
+1      |    31.25 Hz  |      388 |        0 |     388.00 | Low frequency
+2      |    62.50 Hz  |     -193 |     1754 |    1764.59 | Low frequency
+3      |    93.75 Hz  |     -193 |    -1755 |    1765.58 | Low frequency
+4      |   125.00 Hz  |    -2895 |     2755 |    3996.38 | Low frequency
+5      |   156.25 Hz  |     -414 |      274 |     496.46 | Low frequency
+6      |   187.50 Hz  |     -414 |     -274 |     496.46 | Mid Frequency
+7      |   218.75 Hz  |    -2895 |    -2755 |    3996.38 | Mid Frequency
+8      |   250.00 Hz  |      776 |      -14 |     776.13 | Mid Frequency
+9      |   281.25 Hz  |      661 |       34 |     661.87 | Mid Frequency
+10     |   312.50 Hz  |      207 |     -405 |     454.83 | Mid Frequency
+11     |   343.75 Hz  |      255 |     -290 |     386.17 | High Frequency
+12     |   375.00 Hz  |      255 |      290 |     386.17 | High Frequency
+13     |   406.25 Hz  |      207 |      405 |     454.83 | High Frequency
+14     |   437.50 Hz  |      661 |      -34 |     661.87 | High Frequency
+15     |   468.75 Hz  |      776 |       14 |     776.13 | High Frequency
+16     |   500.00 Hz  |      282 |      330 |     434.08 | High Frequency
+17     |   531.25 Hz  |      135 |     1506 |    1512.04 | High Frequency
+18     |   562.50 Hz  |    -1156 |      369 |    1213.46 | High Frequency
+19     |   593.75 Hz  |       20 |      516 |     516.39 | High Frequency
+20     |   625.00 Hz  |      127 |     -941 |     949.53 | High Frequency
+21     |   656.25 Hz  |      855 |       -5 |     855.01 | High Frequency
+22     |   687.50 Hz  |    -1001 |     1224 |    1581.19 | Mid Frequency
+23     |   718.75 Hz  |      -65 |      496 |     500.24 | Mid Frequency
+24     |   750.00 Hz  |      -65 |     -498 |     502.22 | Mid Frequency
+25     |   781.25 Hz  |    -1000 |    -1225 |    1581.34 | Mid Frequency
+26     |   812.50 Hz  |      854 |        4 |     854.01 | Mid Frequency
+27     |   843.75 Hz  |      127 |      939 |     947.55 | Low frequency
+28     |   875.00 Hz  |       20 |     -518 |     518.39 | Low frequency
+29     |   906.25 Hz  |    -1155 |     -370 |    1212.82 | Low frequency
+30     |   937.50 Hz  |      134 |    -1506 |    1511.95 | Low frequency
+31     |   968.75 Hz  |      282 |     -331 |     434.84 | Low frequency
+----------------------------
+ DETECTED:MID FREQUENCY
+FFT Output results  for x[n]=[50,950,100,880,120,920,80,990,30,850,150,910,60,890,110,940,40,870,130,930,70,960,90,860,20,980,140,900,55,925,105,875] REAL IMAGINARY, MAGNITUDE, CLASS
+Sampling Frequency (fs): 1000.00 Hz | Resolution: 31.25 Hz
+0      |     0.00 Hz  |      498 |        0 |     498.00 | DC
+1      |    31.25 Hz  |        2 |        0 |       2.00 | Low frequency
+2      |    62.50 Hz  |        4 |        2 |       4.47 | Low frequency
+3      |    93.75 Hz  |        4 |       -2 |       4.47 | Low frequency
+4      |   125.00 Hz  |       -6 |        0 |       6.00 | Low frequency
+5      |   156.25 Hz  |       -2 |        3 |       3.61 | Low frequency
+6      |   187.50 Hz  |       -2 |       -4 |       4.47 | Mid Frequency
+7      |   218.75 Hz  |       -6 |       -1 |       6.08 | Mid Frequency
+8      |   250.00 Hz  |       -8 |        8 |      11.31 | Mid Frequency
+9      |   281.25 Hz  |        4 |        6 |       7.21 | Mid Frequency
+10     |   312.50 Hz  |        1 |       -1 |       1.41 | Mid Frequency
+11     |   343.75 Hz  |        4 |      -11 |      11.70 | High Frequency
+12     |   375.00 Hz  |        3 |       10 |      10.44 | High Frequency
+13     |   406.25 Hz  |        0 |        0 |       0.00 | High Frequency
+14     |   437.50 Hz  |        4 |       -7 |       8.06 | High Frequency
+15     |   468.75 Hz  |       -8 |       -9 |      12.04 | High Frequency
+16     |   500.00 Hz  |      -36 |      261 |     263.47 | High Frequency
+17     |   531.25 Hz  |      -17 |       -6 |      18.03 | High Frequency
+18     |   562.50 Hz  |      -27 |       19 |      33.02 | High Frequency
+19     |   593.75 Hz  |      -23 |      -27 |      35.47 | High Frequency
+20     |   625.00 Hz  |      -31 |       45 |      54.64 | High Frequency
+21     |   656.25 Hz  |      -35 |      -16 |      38.48 | High Frequency
+22     |   687.50 Hz  |      -34 |        6 |      34.53 | Mid Frequency
+23     |   718.75 Hz  |      -24 |      -90 |      93.15 | Mid Frequency
+24     |   750.00 Hz  |      -24 |       89 |      92.18 | Mid Frequency
+25     |   781.25 Hz  |      -33 |       -6 |      33.54 | Mid Frequency
+26     |   812.50 Hz  |      -35 |       15 |      38.08 | Mid Frequency
+27     |   843.75 Hz  |      -31 |      -47 |      56.30 | Low frequency
+28     |   875.00 Hz  |      -24 |       26 |      35.38 | Low frequency
+29     |   906.25 Hz  |      -27 |      -19 |      33.02 | Low frequency
+30     |   937.50 Hz  |      -17 |        6 |      18.03 | Low frequency
+31     |   968.75 Hz  |      -36 |     -263 |     265.45 | Low frequency
+----------------------------
+DETECTED:HIGH FREQUENCY
+DETECTED:HIGH FREQUENCY
