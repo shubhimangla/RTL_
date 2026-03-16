@@ -1,0 +1,91 @@
+`timescale 1ns/ 1ps
+module spectral_fir_filter_tb;
+  reg clk_tb;
+  reg rst_tb;
+  reg [4:0] bin_index_tb;
+  reg signed [15:0] bin_magnitude_tb;
+  wire signed [15:0] smoothed_magnitude_out_tb;
+  // Internal history to track delay.
+  reg signed [15:0] input_history [0:63]; 
+  integer i;
+  // Frequency Labels
+  real fs = 1000.0;       // Example: 1000 Hz Sampling Frequency
+  real bin_freq;          // Holds the calculated frequency
+  string zone_label;      // Holds the LOW/MID/HIGH tag
+  // Instantiate Spectral filter
+  spectral_fir_filter uut(
+    .clk(clk_tb),
+    .rst(rst_tb),
+    .bin_index(bin_index_tb),
+    .bin_magnitude(bin_magnitude_tb),
+    .smoothed_magnitude_out(smoothed_magnitude_out_tb)
+  );
+   // Clock generation
+  initial clk_tb=0;
+  always #5 clk_tb = ~clk_tb;
+  
+  reg [15:0] test_magnitude [31:0];
+  initial begin
+    for(i=0; i<64; i=i+1) input_history[i] = 0;
+    // Mapping our test_magnitude from fft results
+    test_magnitude[0]=957;  test_magnitude[1]=848;
+    test_magnitude[2]=229;  test_magnitude[3]=228;
+    test_magnitude[4]=232;  test_magnitude[5]=145;
+    test_magnitude[6]=145;  test_magnitude[7]=232;
+    test_magnitude[8]=48;   test_magnitude[9]=113;
+    test_magnitude[10]=40;  test_magnitude[11]=97;
+    test_magnitude[12]=96;  test_magnitude[13]=39;
+    test_magnitude[14]=114; test_magnitude[15]=49;
+    test_magnitude[16]=28;  test_magnitude[17]=53;
+    test_magnitude[18]=23;  test_magnitude[19]=24;
+    test_magnitude[20]=41;  test_magnitude[21]=34;
+    test_magnitude[22]=96;  test_magnitude[23]=58;
+    test_magnitude[24]=58;  test_magnitude[25]=96;
+    test_magnitude[26]=35;  test_magnitude[27]=41;
+    test_magnitude[28]=24;  test_magnitude[29]=22;
+    test_magnitude[30]=54;  test_magnitude[31]=26;
+    // Reset
+    rst_tb=1;
+    bin_magnitude_tb=16'd0;
+    #20 rst_tb=0;
+    
+    $display(" Cycle | Frequency | Input Mag | Input(Delayed) | Smoothed Mag | Zone Label");
+    $display("-----------------------------------------------");
+               
+    for (integer i=0; i<32; i=i+1) begin
+      @(posedge clk_tb);
+      bin_index_tb = i[4:0];
+      // Calculating the Bin frequency.
+      bin_magnitude_tb = test_magnitude[i];     
+      // Store the magnitude
+      input_history[i] = bin_magnitude_tb;
+
+      #2; // Allow logic to propagate
+      bin_freq = (i * fs) / 32.0;
+      
+          if (bin_freq < 150.0)      zone_label = "LOW FREQ";
+          else if (bin_freq < 350.0) zone_label = "MID FREQ";
+          else                       zone_label = "HIGH FREQ";
+     
+            
+      // We look back 13 cycles using (i-13) % 32
+      $display("%4d | %6.1f Hz | %9d | %14d | %12d | %s", 
+    i, 
+    bin_freq, 
+    bin_magnitude_tb, 
+    (i == 0) ? 16'd0 : input_history[i-1], // Prevents negative index error
+    smoothed_magnitude_out_tb,
+    zone_label
+);
+    end
+    #100 $finish;
+  end
+endmodule
+      
+      
+      
+    
+    
+    
+ 
+
