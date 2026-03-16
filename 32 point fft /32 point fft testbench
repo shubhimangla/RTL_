@@ -1,0 +1,268 @@
+// Testbench for 8 point FFT
+`timescale 1ns / 1ps
+ module fft_32_pt_tb;
+   parameter real FS = 1000.0;       // Define your Sampling Frequency here (e.g., 1000Hz)
+    parameter integer N = 32;         // Number of FFT points
+    parameter real BIN_WIDTH = FS/N;    //Frequency Resolution
+    integer j;
+    real bin_freq;
+   
+   // Declaring inputs for DUT
+   reg signed [15:0] tb_in_r[0:31];
+   reg signed [15:0] tb_in_i[0:31]; 
+   // Declaring outputs for DUT
+   wire signed [15:0] tb_out_r[0:31], tb_out_i[0:31];
+   wire is_low, is_mid, is_high;
+   
+   // Declaring the function for bit reversal operation
+   function [4:0] bit_reversal;
+     input [4:0] index;
+     integer k;
+     begin
+     for(k=0; k<5; k=k+1)
+       begin
+         bit_reversal[4-k]=index[k];
+         end
+     end
+   endfunction
+   fft_32pt_top uut (
+     .in_r(tb_in_r),
+     .in_i(tb_in_i),
+     .out_r(tb_out_r),
+     .out_i(tb_out_i),
+     .is_low_freq(is_low),   // Connect the hardware flag to the TB wire
+     .is_mid_freq(is_mid),   // Connect the hardware flag to the TB wire
+     .is_high_freq(is_high)  // Connect the hardware flag to the TB wire
+
+);
+   
+   integer i; 
+   integer rev_indx;
+   real mag;
+   reg signed [15:0] test_vector[0:31]; 
+   initial 
+     begin
+       // Define the input sequence x[n]=[1,2,3,4,4,3,2,1]
+       test_vector[0]=16'd1500;
+       test_vector[1]=16'd2500;
+       test_vector[2]=16'd2400;
+       test_vector[3]=16'd2000;
+       test_vector[4]=16'd500;
+       test_vector[5]=16'd150;
+       test_vector[6]=16'd650;
+       test_vector[7]=16'd1200;
+       test_vector[8]=16'd1800;
+       test_vector[9]=16'd2300;
+       test_vector[10]=16'd2600;
+       test_vector[11]=16'd2750;
+       test_vector[12]=16'd2650;
+       test_vector[13]=16'd2400;
+       test_vector[14]=16'd2000;
+       test_vector[15]=16'd1500;
+       test_vector[16]=16'd1000;
+       test_vector[17]=16'd400;
+       test_vector[18]=16'd250;
+       test_vector[19]=16'd100;
+       
+       
+       
+       for(i=20; i<32; i=i+1)
+         begin
+           test_vector[i]=16'd0;
+         end
+       #1000; // Wait for a moment
+       // Apply the test vector to our natural order array
+       for(i=0; i<32; i=i+1)
+         begin
+         tb_in_r[i]=test_vector[i];
+         tb_in_i[i]=16'd0;// Imaginary part is zero
+         end
+       #2000; // Wait for some time
+       
+       // Display the results.
+       $display("FFT Output results  for x[n]=[1500,2500,2400,2000,500,150,650,1200,1800,2300,2600,2750,2650,2400,2000,1500,1000,400,250,100] REAL IMAGINARY, MAGNITUDE, CLASS");
+       $display("Sampling Frequency (fs): %0.2f Hz | Resolution: %0.2f Hz", FS, BIN_WIDTH);
+       for(i=0; i<32; i=i+1)
+         begin
+           rev_indx = bit_reversal(i);
+         // Calculation of the Magnitude 
+           mag=$sqrt((1.0*tb_out_r[rev_indx]*tb_out_r[rev_indx])+(1.0*tb_out_i[rev_indx]*tb_out_i[rev_indx]));
+           bin_freq = i * BIN_WIDTH;
+           $write("%-6d | %8.2f Hz  | %8d | %8d | %10.2f | ", i, bin_freq, tb_out_r[rev_indx], tb_out_i[rev_indx], mag);
+          
+           if(i==0) $display("DC");
+           else if (i<6 || i>26) $display("Low frequency");
+           else if (i<11 || i>21) $display ("Mid Frequency");
+           else    $display("High Frequency");
+    end
+       
+          $display("----------------------------");
+       if (is_low) 
+       $display  ("	DETECTED:LOW FREQUENCY");
+
+       
+       if(is_mid)
+         $display(" DETECTED:MID FREQUENCY");
+       
+       if(is_high)
+       $display ("DETECTED:HIGH FREQUENCY");
+       #10;
+      
+   #5000 // Long delay to separate waveforms.
+       test_vector[0]  = 16'd58000; // High range(Randomized)
+test_vector[1]  = 16'd61200; 
+test_vector[2]  = 16'd45000; 
+test_vector[3]  = 16'd59000; 
+test_vector[4]  = 16'd1200;  // Drop to Low range (Randomized)
+test_vector[5]  = 16'd8500;  
+test_vector[6]  = 16'd300;   
+test_vector[7]  = 16'd4000;  
+test_vector[8]  = 16'd63000; // Back to High
+test_vector[9]  = 16'd52000; 
+test_vector[10] = 16'd48000; 
+test_vector[11] = 16'd65535; 
+test_vector[12] = 16'd2500;  // Back to Low
+test_vector[13] = 16'd150;   
+test_vector[14] = 16'd9000;  
+test_vector[15] = 16'd3200;  
+test_vector[16] = 16'd55000; // Back to High
+test_vector[17] = 16'd49000; 
+test_vector[18] = 16'd60000; 
+test_vector[19] = 16'd42000;
+       for(i=20; i<32; i=i+1)
+     
+         begin
+           test_vector[i]=16'd0;
+         end
+       #1000; // Wait for a moment
+       // Apply the test vector to our natural order array
+       for(i=0; i<32; i=i+1)
+         begin
+         tb_in_r[i]=test_vector[i];
+         tb_in_i[i]=16'd0;// Imaginary part is zero
+         end
+       #2000; // Wait for some time
+       
+       // Display the results.
+       $display("FFT Output results  for x[n]=[58000,61200,45000,59000,1200,8500,300,4000,63000,52000,48000,65535,2500,150,9000,3200,55000,49000,60000,42000] REAL IMAGINARY, MAGNITUDE, CLASS");
+       $display("Sampling Frequency (fs): %0.2f Hz | Resolution: %0.2f Hz", FS, BIN_WIDTH);
+       for(i=0; i<32; i=i+1)
+         begin
+           rev_indx = bit_reversal(i);
+         // Calculation of the Magnitude 
+           mag=$sqrt((1.0*tb_out_r[rev_indx]*tb_out_r[rev_indx])+(1.0*tb_out_i[rev_indx]*tb_out_i[rev_indx]));
+           bin_freq = i * BIN_WIDTH;
+           $write("%-6d | %8.2f Hz  | %8d | %8d | %10.2f | ", i, bin_freq, tb_out_r[rev_indx], tb_out_i[rev_indx], mag);
+           
+           if(i==0) $display("DC");
+           else if (i<6 || i>26) $display("Low frequency");
+           else if (i<11 || i>21) $display ("Mid Frequency");
+           else    $display("High Frequency");
+    end
+       
+          $display("----------------------------");
+       if (is_low) 
+       $display  ("	DETECTED:LOW FREQUENCY");
+
+       
+       if(is_mid)
+         $display(" DETECTED:MID FREQUENCY");
+       
+       if(is_high)
+       $display ("DETECTED:HIGH FREQUENCY");
+       #10;
+       #5000// Long delay for the separation of frequency.
+       test_vector[0]  = 16'd50; // Peak Valley
+       test_vector[1]  = 16'd950;     
+       test_vector[2]  = 16'd100; 
+       test_vector[3]  = 16'd880;   
+       test_vector[4]  = 16'd120; 
+       test_vector[5]  = 16'd920;    
+       test_vector[6]  = 16'd80; 
+       test_vector[7]  = 16'd990;   
+       test_vector[8]  = 16'd30; 
+       test_vector[9]  = 16'd850;     
+       test_vector[10] = 16'd150; 
+       test_vector[11] = 16'd910;   
+       test_vector[12] = 16'd60; 
+       test_vector[13] = 16'd890;    
+       test_vector[14] = 16'd110; 
+       test_vector[15] = 16'd940;   
+       test_vector[16] = 16'd40; 
+       test_vector[17] = 16'd870;    
+       test_vector[18] = 16'd130; 
+       test_vector[19] = 16'd930; 
+       test_vector[20]=16'd70; 
+       test_vector[21]=16'd960; 
+       test_vector[22]=16'd90;  
+       test_vector[23]=16'd860;
+       test_vector[24]=16'd20; 
+       test_vector[25]=16'd980; 
+       test_vector[26]=16'd140; 
+       test_vector[27]=16'd900;
+       test_vector[28]=16'd55;  
+       test_vector[29]=16'd925; 
+       test_vector[30]=16'd105; 
+       test_vector[31]=16'd875;
+//test_vector[20] = 16'd65535; 
+//test_vector[21] = 16'd0;     
+//test_vector[22] = 16'd65450;
+   
+       //for(i=20; i<32; i=i+1)
+     
+        // begin
+           //test_vector[i]=16'd0;
+         //end
+       #1000; // Wait for a moment
+       // Apply the test vector to our natural order array
+       for(i=0; i<32; i=i+1)
+         begin
+         tb_in_r[i]=test_vector[i];
+         tb_in_i[i]=16'd0;// Imaginary part is zero
+         end
+       #2000; // Wait for some time
+       
+       // Display the results.
+       $display("FFT Output results  for x[n]=[50,950,100,880,120,920,80,990,30,850,150,910,60,890,110,940,40,870,130,930,70,960,90,860,20,980,140,900,55,925,105,875] REAL IMAGINARY, MAGNITUDE, CLASS");
+                $display("Sampling Frequency (fs): %0.2f Hz | Resolution: %0.2f Hz", FS, BIN_WIDTH);
+       for(i=0; i<32; i=i+1)
+         begin
+           rev_indx = bit_reversal(i);
+         // Calculation of the Magnitude 
+           mag=$sqrt((1.0*tb_out_r[rev_indx]*tb_out_r[rev_indx])+(1.0*tb_out_i[rev_indx]*tb_out_i[rev_indx]));
+           bin_freq = i * BIN_WIDTH;
+           $write("%-6d | %8.2f Hz  | %8d | %8d | %10.2f | ", i, bin_freq, tb_out_r[rev_indx], tb_out_i[rev_indx], mag);
+           
+           if(i==0) $display("DC");
+           else if (i<6 || i>26) $display("Low frequency");
+           else if (i<11 || i>21) $display ("Mid Frequency");
+           else    $display("High Frequency");
+    end
+       
+          $display("----------------------------");
+       if (is_low) 
+       $display  ("	DETECTED:LOW FREQUENCY");
+
+       
+       if(is_mid)
+         $display(" DETECTED:MID FREQUENCY");
+       
+       if(is_high)
+       $display ("DETECTED:HIGH FREQUENCY");
+       #10;
+       $finish;
+     end
+ endmodule
+       
+   
+       
+    
+
+   
+         
+     
+      
+       
+     
+      
+   
